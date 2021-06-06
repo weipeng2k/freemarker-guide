@@ -23,6 +23,15 @@ public class TemplateFactory {
     }
 
     /**
+     * 获取Config
+     *
+     * @return config
+     */
+    public static Configuration getConfiguration() {
+        return configuration;
+    }
+
+    /**
      * 根据名称获取模板
      *
      * @param name 模板名称

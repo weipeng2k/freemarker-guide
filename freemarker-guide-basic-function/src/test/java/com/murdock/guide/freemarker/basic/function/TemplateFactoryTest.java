@@ -3,14 +3,7 @@ package com.murdock.guide.freemarker.basic.function;
 import freemarker.template.Template;
 import org.junit.Test;
 
-import java.io.StringWriter;
-import java.io.Writer;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author weipeng2k 2021年06月04日 下午21:46:38
