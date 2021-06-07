@@ -1,6 +1,7 @@
 package com.murdock.guide.freemarker.basic.function;
 
 import freemarker.core.TemplateElement;
+import freemarker.template.Configuration;
 import freemarker.template.Template;
 import org.junit.Test;
 
@@ -20,7 +21,11 @@ public class TemplateTest {
 
     @Test
     public void render() throws Exception {
-        Template template = TemplateFactory.getTemplate("test.ftl");
+        Configuration configuration = new Configuration(Configuration.VERSION_2_3_31);
+        configuration.setDefaultEncoding("UTF-8");
+        configuration.setClassLoaderForTemplateLoading(TemplateFactory.class.getClassLoader(), "templates");
+
+        Template template = configuration.getTemplate("test.ftl");
 
         Map<String, Object> model = new HashMap<>();
         model.put("name", "world");
