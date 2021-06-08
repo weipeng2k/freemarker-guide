@@ -39,6 +39,21 @@ public class TemplateTest {
     }
 
     @Test
+    public void render2() throws Exception {
+        Template template = TemplateFactory.getTemplate("test.ftl");
+
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", "world");
+
+        Writer output = new StringWriter();
+        template.process(model, output);
+
+        output.flush();
+        System.out.println(output);
+        assertEquals("hello, world!", output.toString());
+    }
+
+    @Test
     public void pojoRender() throws Exception {
         Template template = TemplateFactory.getTemplate("pojo-test.ftl");
 

@@ -34,22 +34,22 @@
 ```java
 @Test
 public void render() throws Exception {
-    Configuration configuration = new Configuration(Configuration.VERSION_2_3_31);
-    configuration.setDefaultEncoding("UTF-8");
-    configuration.setClassLoaderForTemplateLoading(TemplateFactory.class.getClassLoader(), "templates");
+        Configuration configuration = new Configuration(Configuration.VERSION_2_3_31);
+        configuration.setDefaultEncoding("UTF-8");
+        configuration.setClassLoaderForTemplateLoading(TemplateFactory.class.getClassLoader(), "templates");
 
-    Template template = configuration.getTemplate("test.ftl");
+        Template template = configuration.getTemplate("test.ftl");
 
-    Map<String, Object> model = new HashMap<>();
-    model.put("name", "world");
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", "world");
 
-    Writer output = new StringWriter();
-    template.process(model, output);
+        Writer output = new StringWriter();
+        template.process(model, output);
 
-    output.flush();
-    System.out.println(output);
-    assertEquals("hello, world!", output.toString());
-}
+        output.flush();
+        System.out.println(output);
+        assertEquals("hello, world!", output.toString());
+        }
 ```
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;上述代码完成了模板的载入，数据的创建，以及模板和数据的合并渲染。
@@ -64,9 +64,89 @@ public void render() throws Exception {
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;如上图描述，模板引擎（FreeMarkder）在概念上主要包括：模板、数据和输出，相信任何模板引擎都会对这三者进行抽象和定义。模板，需要建立一个抽象能够定义和描述模板中的元素。数据，需要建立一个能够匹配模板中表达式的类型系统。输出，需要建立模板与数据合并后，最终按照何种字符集将内容写到输出中。
 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;下面会围绕这三个概念，介绍FreeMarker是如何兑现它们的。
+
 ## Configuration配置
 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Configuration`，顾名思义，是FreeMarker用来存储配置的，或者说是配置的抽象。FreeMarker将全局配置，比如：模板的位置，共享变量，这些都放置在Configuration中，可以说，它是有状态的，且是全局的。
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Configuration`推荐是一个共享的单例，它将引用暴露出来，让使用者可以用它去创建（或者获取）模板，所以说，它除了是配置，还是FreeMarker编程界面的入口。
+
+### 配置作用
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Configuration`用来保存配置和共享变量，在前面的示例代码中：
+
+```java
+Configuration configuration = new Configuration(Configuration.VERSION_2_3_31);
+configuration.setDefaultEncoding("UTF-8");
+configuration.setClassLoaderForTemplateLoading(TemplateFactory.class.getClassLoader(), "templates");
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;它设置了版本，编码格式以及模板加载的位置。从方法也可以看出来，这些设置是全局的，它们会影响到FreeMarker对模板加载，合并以及输出的过程。
+
+### TemplateFactory
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;由于需要通过`Configuration`获取模板`Template`，所以对于要求单例化的`Configuration`可以通过封装到`TemplateFactory`中加以简化。
+
+```java
+public class TemplateFactory {
+
+    private static final Configuration configuration;
+
+    static {
+        configuration = new Configuration(Configuration.VERSION_2_3_31);
+        configuration.setDefaultEncoding("UTF-8");
+        configuration.setClassLoaderForTemplateLoading(TemplateFactory.class.getClassLoader(), "templates");
+    }
+
+    /**
+     * 根据名称获取模板
+     *
+     * @param name 模板名称
+     * @return 模板
+     */
+    public static Template getTemplate(String name) {
+        try {
+            return configuration.getTemplate(name);
+        } catch (IOException ex) {
+            throw new RuntimeException("get template error.", ex);
+        }
+    }
+}
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通过`TemplateFactory`可以简化模板的获取以及使用，如下面代码所示：
+
+```java
+@Test
+public void render2() throws Exception {
+    Template template = TemplateFactory.getTemplate("test.ftl");
+
+    Map<String, Object> model = new HashMap<>();
+    model.put("name", "world");
+
+    Writer output = new StringWriter();
+    template.process(model, output);
+
+    output.flush();
+    System.out.println(output);
+    assertEquals("hello, world!", output.toString());
+}
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`Configuration`在创建时，需要设置版本`Version`，这个点有点意思。它是解决在CLASSPATH下，存在多个FreeMarker版本的问题，使用者设置了一个版本A，结果发现加载的是另一个版本，会报错。这种检测方式感觉有些历史，实际可以通过使用`ClassLoader#getResources`去加载Jar中一些固定存在的类，如果发现多份（亦或版本不兼容，这个显得高级点），就会报错。
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;按照道理Maven仲裁可以解决这类问题，毕竟会仲裁出一个版本，而这么做的原因，很大程度上可能是FreeMarker的坐标有变动？这个没有更深入求证，意义不大，至于版本要求，按照自己依赖的版本设置即可，不必太纠结。
+
 ## Template模板
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通过`TemplateFactory`获取到`Template`后，就可以使用该实例，合并数据，渲染出内容。
+
+### 合并处理
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+
+### 
 
 ## TemplateModel数据模型
 
