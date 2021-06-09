@@ -77,7 +77,7 @@ public class TemplateTest {
 
     @Test
     public void node() {
-        Template template = TemplateFactory.getTemplate("pojo-test.ftl");
+        Template template = TemplateFactory.getTemplate("test.ftl");
         TemplateElement rootTreeNode = template.getRootTreeNode();
         travelElement(rootTreeNode, 0);
     }

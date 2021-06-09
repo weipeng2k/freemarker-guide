@@ -144,10 +144,148 @@ public void render2() throws Exception {
 
 ### 合并处理
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;通过`Template#process`方法，完成模板与数据的合并渲染工作。
 
-### 
+```java
+Map<String, Object> model = new HashMap<>();
+model.put("name", "world");
+
+Writer output = new StringWriter();
+template.process(model, output);
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`process(Object dataModel, Writer out) throws TemplateException, IOException`方法，接受一个数据模型Object，以及输出流Writer，后者可以简单的认为通过合并后的数据将会输出到流中，而前者将会被FreeMarker包装为数据模型，方便后续模板元素`TemplateElement`进行访问。
+
+### TemplateElement
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`FreeMarker`将ftl模板文件进行了抽象，如下图所示：
+
+![TemplateElement](https://upload-images.jianshu.io/upload_images/6205088-66279fce322d4dd9.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;一个`hello, ${name}!`在`FreeMarker`中被抽象成了一组结构，一个`MixedContent`包裹着两个`TextBlock`和一个`DollarVariable`，他们各自对应着文本和变量，它们的超类都是`TemplateElement`。
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;可以想象，当合并渲染时，传入的是`TemplateElement`根（元素）节点，它会递归的遍历下面的所有元素，然后进行适当的处理，比如：`TextBlock`就直接输出，而`DollarVariable`则会同数据模型进行合并，生成出内容后再输出。
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`TemplateElement`对应与模板文件的抽象，它将模板文件上的元素和Java代码连接起来，是个很不错的抽象。
 
 ## TemplateModel数据模型
 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;在进行模板输出时，传入的数据类型是`Object`，但是却能被模板的占位符正确解析。最简的做法，就是不使用数据模型，通过反射进行获取，比如：`${name}`，就通过JAVA反射获取`name`字段加以显示。
 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;这么做看似能解决一些问题，但是问题场景一旦复杂起来，就无法解决了，比如：占位符中的内容是一个列表，我们需要进行遍历，反射就很难妥帖的处理这个场景了。
+
+### TemlateModel
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`FreeMarker`将数据模型统一的定义为`TemplateModel`，通过其子类（和抽象体系）来完成对任意数据结构的定义。这么说有些抽象，我们先看两个数据结构。
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Phone定义：
+
+```java
+@Getter
+@Setter
+@ToString
+public class Phone {
+    private String brand;
+
+    private String model;
+}
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;User定义：
+
+```java
+@Getter
+@Setter
+@ToString
+public class User {
+
+    private String name;
+
+    private String sex;
+
+    private int age;
+
+    private Phone phone;
+}
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;可以看到只是一个一对一的结构。可以通过创建一个`User`对象，来看一下`FreeMarker`如何包装它。
+
+```java
+@Test
+public void wrapper() throws TemplateModelException {
+    Configuration configuration = TemplateFactory.getConfiguration();
+    ObjectWrapper objectWrapper = configuration.getObjectWrapper();
+
+    User user = new User();
+    user.setAge(18);
+    user.setName("流川枫");
+    user.setSex("男");
+    Phone phone = new Phone();
+    phone.setBrand("Apple");
+    phone.setModel("iPhone 12 Pro Max");
+    user.setPhone(phone);
+
+    TemplateModel templateModel = objectWrapper.wrap(user);
+
+    StringModel stringModel = (StringModel) templateModel;
+
+    TemplateModel age = stringModel.get("age");
+    System.out.println("int ==> " + age.getClass().getName());
+
+    TemplateModel sex = stringModel.get("sex");
+    System.out.println("String ==> " + sex.getClass().getName());
+
+    TemplateModel phone1 = stringModel.get("phone");
+    System.out.println("Phone ==> " + phone1.getClass().getName());
+}
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;上述测试代码，先构建了一个`User`对象，然后进行了设置值，最后分别通过根`TemplateModel`获取不同的属性，可以看到不同的属性类型对应的是不同的`TemplateModel`子类型。
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;运行测试，输出：
+
+```sh
+int ==> freemarker.template.SimpleNumber
+String ==> freemarker.template.SimpleScalar
+Phone ==> freemarker.ext.beans.StringModel
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;可以看到`int`、`String`以及自定义数据结构分别使用不同的子类型进行修饰，这么做的目的就是让模板在获取数据模型的数据时，变得有法可依，虽然用户定义了不同的数据结构，但是`FreeMarker`却可以自由的访问这些数据，完成模板与数据的合并。
+
+### 获取数据
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;如果能够将用户的自定义数据结构映射到自生的数据类型上，那么就可以自由的访问用户的数据了，事实上`FreeMaker`就是这么做的。
+
+```java
+@Test
+public void wrapper2() throws Exception {
+    Configuration configuration = TemplateFactory.getConfiguration();
+    ObjectWrapper objectWrapper = configuration.getObjectWrapper();
+
+    User user = new User();
+    user.setAge(18);
+    user.setName("流川枫");
+    user.setSex("男");
+    Phone phone = new Phone();
+    phone.setBrand("Apple");
+    phone.setModel("iPhone 12 Pro Max");
+    user.setPhone(phone);
+
+    TemplateModel wrap = objectWrapper.wrap(user);
+    StringModel stringModel = (StringModel) wrap;
+    TemplateModel age = stringModel.get("age");
+    SimpleNumber simpleNumber = (SimpleNumber) age;
+    Assert.assertEquals(18, simpleNumber.getAsNumber().intValue());
+
+    TemplateModel templateModel = stringModel.get("phone");
+    StringModel sm = (StringModel) templateModel;
+    TemplateModel brand = sm.get("brand");
+    SimpleScalar sm2 = (SimpleScalar) brand;
+    Assert.assertEquals("Apple", sm2.getAsString());
+}
+```
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;可以看到通过不同的`TemplateModel`子类型，可以访问`User`对象中的任意属性。有了模板`TemplateElement`抽象，将模板抽象成可以编程的状态，在通过`TemplateModel`包装用户数据，方便模板引擎对于数据的获取，这两者组合起来，就完成了`FreeMarker`最核心的工作。
+
+> 最终的属性数据获取还是通过反射，并且Method对象会被缓存，有一定的优化，但是有一把锁，性能实际有些提升余地。虽然代码中写了使用CHM进行改造，性能预期达不synchronized + HashMap，但是笔者认为不应该如此，再不济将缓存做到ThreadLocal中也是可以的。

@@ -19,10 +19,8 @@ public class BeansWrapperTest {
 
     @Test
     public void wrapper() throws TemplateModelException {
-        BeansWrapperBuilder builder = new BeansWrapperBuilder(Configuration.VERSION_2_3_31);
-        builder.setUseModelCache(true);
-        builder.setExposeFields(true);
-        BeansWrapper beansWrapper = builder.build();
+        Configuration configuration = TemplateFactory.getConfiguration();
+        ObjectWrapper objectWrapper = configuration.getObjectWrapper();
 
         User user = new User();
         user.setAge(18);
@@ -33,9 +31,18 @@ public class BeansWrapperTest {
         phone.setModel("iPhone 12 Pro Max");
         user.setPhone(phone);
 
-        TemplateModel templateModel = beansWrapper.wrap(user);
+        TemplateModel templateModel = objectWrapper.wrap(user);
 
-        System.out.println(((StringModel) templateModel).getAsString());
+        StringModel stringModel = (StringModel) templateModel;
+
+        TemplateModel age = stringModel.get("age");
+        System.out.println("int ==> " + age.getClass().getName());
+
+        TemplateModel sex = stringModel.get("sex");
+        System.out.println("String ==> " + sex.getClass().getName());
+
+        TemplateModel phone1 = stringModel.get("phone");
+        System.out.println("Phone ==> " + phone1.getClass().getName());
     }
 
     @Test
