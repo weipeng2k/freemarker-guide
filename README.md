@@ -1,2 +1,2 @@
-# freemarker-guide
-Freemarker的使用
+# Initial page
+
