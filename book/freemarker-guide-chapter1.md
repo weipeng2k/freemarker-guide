@@ -288,4 +288,4 @@ public void wrapper2() throws Exception {
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;可以看到通过不同的`TemplateModel`子类型，可以访问`User`对象中的任意属性。有了模板`TemplateElement`抽象，将模板抽象成可以编程的状态，在通过`TemplateModel`包装用户数据，方便模板引擎对于数据的获取，这两者组合起来，就完成了`FreeMarker`最核心的工作。
 
-> 最终的属性数据获取还是通过反射，并且Method对象会被缓存，有一定的优化，但是有一把锁，性能实际有些提升余地。虽然代码中写了使用CHM进行改造，性能预期达不synchronized + HashMap，但是笔者认为不应该如此，再不济将缓存做到ThreadLocal中也是可以的。
+> 最终的属性数据获取还是通过反射，并且Method对象会被缓存，有一定的优化，但是有一把锁，性能实际有些提升余地。虽然代码中写了使用CHM进行改造，性能预期达不到synchronized + HashMap，但是笔者认为不应该如此，再不济将缓存做到ThreadLocal中也是可以的。
